@@ -11,11 +11,51 @@ Model name is converted to lowercase for the collection name:
 - BlogPost -> "blogs" collection
 """
 
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel, Field, HttpUrl
+from typing import Optional, Dict, Any, List, Literal, Union
 
-# Example schemas (replace with your own):
 
+# -----------------------------
+# Core models for API Tester
+# -----------------------------
+
+HttpMethod = Literal["GET", "POST", "PUT", "DELETE", "PATCH"]
+
+class RequestConfig(BaseModel):
+    url: str = Field(..., description="Target API URL")
+    method: HttpMethod = Field("GET")
+    headers: Dict[str, str] = Field(default_factory=dict)
+    params: Dict[str, str] = Field(default_factory=dict)
+    body: Optional[Union[Dict[str, Any], str]] = Field(
+        default=None, description="Request body as JSON object or raw string"
+    )
+
+class RequestHistory(BaseModel):
+    """
+    Collection name: "requesthistory"
+    Stores each executed request plus response summary.
+    """
+    request: RequestConfig
+    response_status: Optional[int] = None
+    response_time_ms: Optional[int] = None
+    response_headers: Dict[str, str] = Field(default_factory=dict)
+    response_body: Optional[Union[Dict[str, Any], str]] = None
+
+class CollectionItem(BaseModel):
+    title: str = Field(..., description="Label for this saved request")
+    request: RequestConfig
+
+class Collection(BaseModel):
+    """
+    Collection name: "collection"
+    Represents a folder of saved API requests.
+    """
+    name: str
+    description: Optional[str] = None
+    items: List[CollectionItem] = Field(default_factory=list)
+
+
+# Example schemas kept for reference; not used directly by the app
 class User(BaseModel):
     """
     Users collection schema
@@ -38,11 +78,4 @@ class Product(BaseModel):
     category: str = Field(..., description="Product category")
     in_stock: bool = Field(True, description="Whether product is in stock")
 
-# Add your own schemas here:
 # --------------------------------------------------
-
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
